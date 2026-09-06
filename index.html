@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Little Prince - Animated Story</title>
+  <style>
+    /* ===== APPLE-STYLE CORE PRINCIPLES ===== */
+    :root {
+      --duration-fast: 100ms;
+      --duration-normal: 200ms;
+      --duration-slow: 300ms;
+      --easing: cubic-bezier(0.4, 0, 0.2, 1);
+      --bg: #f8f9fa;
+      --text: #1d1d1f;
+      --accent: #ff6b6b;
+      --space: #0a1a2f;
+    }
+    
+    /* Accessibility helpers */
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
+    
+    /* Reduced motion overrides */
+    @media (prefers-reduced-motion: reduce) {
+      * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+      .story-content, .illustration, .interactive-item { transform: none !important; opacity: 1 !important; }
+      .skeleton { animation: none; background: #e0e0e0; }
+      .petal { animation: none; opacity: 0; }
+    }
+    
+    /* ===== BASE STYLES ===== */
+    * { margin: 0; box-sizing: border-box; }
+    body { 
+      font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif; 
+      background: var(--bg); 
+      color: var(--text); 
+      overflow-x: hidden;
+    }
+    
+    .story-section { 
+      position: relative; 
+      min-height: 100vh; 
+      padding: 4rem 6rem; 
+      display: flex; 
+      align-items: center; 
+      justify-content: space-between; 
+      gap: 3rem;
+    }
+    
+    .story-content { 
+      max-width: 45%; 
+      flex-shrink: 0;
+    }
+    
+    .story-content h1 { 
+      font-size: 3.5rem; 
+      line-height: 1.1; 
+      margin-bottom: 1.5rem; 
+      color: var(--text);
+    }
+    
+    .story-content h2 { 
+      font-size: 2.25rem; 
+      margin-bottom: 1rem; 
+      color: var(--accent);
+    }
+    
+    .story-content p { 
+      font-size: 1.125rem; 
+      line-height: 1.6;
+    }
+    
+    /* ===== ILLUSTRATION LAYERS (PARALLAX) ===== */
+    .illustration { 
+      position: relative; 
+      width: 45%; 
+      height: auto; 
+      transform: translateZ(0);
+    }
+    
+    .illustration img { 
+      width: 100%; 
+      height: auto; 
+      display: block; 
+      pointer-events: none;
+    }
+    
+    /* Scroll-driven parallax */
+    .parallax-layer { 
+      transform: translate3d(0, calc(var(--scroll-progress, 0) * var(--speed, 0) * 100vh), 0); 
+      transition: transform var(--duration-slow) var(--easing);
+    }
+    
+    /* Speed values (set in HTML) */
+    #asteroid-hop { --speed: 0.3; } /* Stars */
+    #planets { --speed: 0.6; }     /* Foreground planets */
+    #prince-ship { --speed: 0.9; }  /* Prince's ship (fastest) */
+    
+    /* ===== MICRO-INTERACTIONS ===== */
+    .interactive-item { 
+      cursor: pointer; 
+      transition: transform var(--duration-fast) var(--easing), 
+                  box-shadow var(--duration-fast) var(--easing); 
+      border-radius: 12px; 
+      overflow: hidden;
+    }
+    
+    .interactive-item:hover,
+    .interactive-item:focus-visible { 
+      transform: scale(1.03); 
+      box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    }
+    
+    /* Special: Sheep-in-box glow */
+    #sheep-box:hover { 
+      box-shadow: 0 0 15px rgba(255,107,107,0.4); 
+    }
+    
+    /* ===== SCENE TRANSITIONS ===== */
+    .story-content,
+    .illustration { 
+      opacity: 0; 
+      transform: translateY(20px); 
+      transition: opacity var(--duration-normal) var(--easing),
+                  transform var(--duration-normal) var(--easing);
+    }
+    
+    .story-content.is-visible,
+    .illustration.is-visible { 
+      opacity: 1; 
+      transform: translateY(0);
+    }
+    
+    /* ===== SKELETON LOADERS ===== */
+    .skeleton { 
+      background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); 
+      background-size: 200% 100%; 
+      animation: pulse 1.5s ease-in-out infinite; 
+      border-radius: 8px; 
+      height: 16px; 
+      margin: 8px 0;
+    }
+    
+    @keyframes pulse { 
+      0% { background-position: 200% 0; } 
+      100% { background-position: -200% 0; }
+    }
+    
+    /* ===== SPECIAL EFFECTS ===== */
+    /* Rose petal fall */
+    .petal {
+      position: fixed;
+      top: -10px;
+      pointer-events: none;
+      animation: fall linear forwards;
+      z-index: 1000;
+    }
+    
+    @keyframes fall {
+      to { 
+        transform: translateY(100vh) rotate(360deg); 
+        opacity: 0;
+      }
+    }
+    
+    /* Baobab threat pulse */
+    .baobab-pulse {
+      animation: pulse-threat 2s ease-in-out infinite;
+    }
+    
+    @keyframes pulse-threat {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.02); }
+    }
+    
+    /* ===== REDUCED MOTION FALLBACKS ===== */
+    @media (prefers-reduced-motion: reduce) {
+      .interactive-item:hover,
+      .interactive-item:focus-visible { 
+        transform: none; 
+        box-shadow: none; 
+      }
+      .story-content,
+      .illustration { 
+        opacity: 1 !important; 
+        transform: none !important; 
+      }
+      .skeleton { animation: none; background: #e0e0e0; }
+      .petal { display: none; }
+      .baobab-pulse { animation: none; }
+    }
+    
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 768px) {
+      .story-section { 
+        flex-direction: column; 
+        text-align: center; 
+        padding: 2rem; 
+      }
+      .story-content,
+      .illustration { 
+        max-width: 100%; 
+      }
+      .story-content h1 { font-size: 2.5rem; }
+      .story-content h2 { font-size: 1.75rem; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Reduced Motion Notice (for screen readers) -->
+  <div id="reduced-motion-notice" aria-live="polite" class="sr-only">
+    Animations reduced for accessibility
+  </div>
+
+  <!-- ===== STORY SECTIONS ===== -->
+  
+  <!-- PROLOGUE: Desert Crash -->
+  <section class="story-section" id="prologue">
+    <div class="story-content">
+      <h1>The Little Prince</h1>
+      <p>Once when I was six years old I saw a magnificent picture in a book, called True Stories from Nature...</p>
+    </div>
+    <!-- Desert background (embedded SVG) -->
+    <div class="illustration parallax-layer" data-speed="0.1">
+      <svg viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="desertGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" style="stop-color:#D2B48C" />
+            <stop offset="100%" style="stop-color:#F5DEB3" />
+          </linearGradient>
+        </defs>
+        <rect width="800" height="600" fill="url(#desertGrad)" />
+        <!-- Distant hills -->
+        <path d="M0,400 Q200,350 400,400 T800,400 L800,600 L0,600 Z" fill="#C0A080" opacity="0.7" />
+        <!-- Sun -->
+        <circle cx="700" cy="100" r="50" fill="#FFD700" />
+      </svg>
+    </div>
+  </section>
+
+  <!-- ASTEROID HOP: Scroll Parallax -->
+  <section class="story-section" id="asteroid-hop">
+    <div class="story-content">
+      <h2>Asteroid B-612</h2>
+      <p>On his tiny asteroid, the Prince cared for his beloved rose...</p>
+    </div>
+    <!-- Starfield background (slowest) -->
+    <div class="illustration parallax-layer" id="stars" data-speed="0.1">
+      <svg viewBox="0 0 1000 600" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="starGrad" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" style="stop-color:#FFFFFF" />
+            <stop offset="70%" style="stop-color:#FFFFFF" />
+            <stop offset="100%" style="stop-color:#FFFFFF00" />
+          </radialGradient>
+        </defs>
+        <!-- Stars (random positions for realism) -->
+        <circle cx="150" cy="80" r="1" fill="#FFFFFF" opacity="0.6" />
+        <circle cx="300" cy="200" r="2" fill="#FFFFFF" opacity="0.8" />
+        <circle cx="450" cy="120" r="1.5" fill="#FFFFFF" opacity="0.5" />
+        <circle cx="600" cy="350" r="1" fill="#FFFFFF" opacity="0.7" />
+        <circle cx="750" cy="90" r="2.5" fill="#FFFFFF" opacity="0.9" />
+        <circle cx="200" cy="400" r="1.2" fill="#FFFFFF" opacity="0.6" />
+        <circle cx="500" cy="500" r="1.8" fill="#FFFFFF" opacity="0.8" />
+        <circle cx="800" cy="250" r="1" fill="#FFFFFF" opacity="0.4" />
+      </svg>
+    </div>
+    <!-- Planets (medium speed) -->
+    <div class="illustration parallax-layer" id="planets" data-speed="0.3">
+      <svg viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
+        <!-- Asteroid B-612 -->
+        <circle cx="400" cy="300" r="40" fill="#8B4513" />
+        <circle cx="400" cy="300" r="35" fill="#A0522D" opacity="0.8" />
+        <!-- Tiny rose -->
+        <circle cx="400" cy="260" r="8" fill="#FF6B6B" />
+        <path d="M395,250 Q400,240 405,250" stroke="#8B0000" stroke-width="1.5" fill="none" />
+      </svg>
+    </div>
+    <!-- Prince's ship (fastest) -->
+    <div class="illustration parallax-layer" id="prince-ship" data-speed="0.6">
+      <svg viewBox="0 0 200 150" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <linearGradient id="shipGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" style="stop-color:#FFD700" />
+            <stop offset="100%" style="stop-color:#FFA500" />
+          </linearGradient>
+        </defs>
+        <!-- Ship body -->
+        <path d="M50,100 Q100,50 150,100 Q140,110 100,110 Q60,110 50,100 Z" fill="url(#shipGrad)" />
+        <!-- Flame -->
+        <path d="M100,100 Q110,130 100,140 Q90,130 100,100 Z" fill="#FF4500" opacity="0.8" />
+        <!-- Prince -->
+        <circle cx="100" cy="70" r="12" fill="#DEB887" />
+        <circle cx="98" cy="65" r="2" fill="#000" />
+        <circle cx="102" cy="65" r="2" fill="#000" />
+        <path d="Q100,75 100,80" stroke="#000" stroke-width="1.5" fill="none" />
+      </svg>
+    </div>
+  </section>
+
+  <!-- THE SHEEP IN THE BOX: Hover Micro-Interaction -->
+  <section class="story-section" id="sheep">
+    <div class="story-content">
+      <h2>The Sheep in the Box</h2>
+      <p>"Please... draw me a sheep!"...</p>
+      <!-- Interactive box -->
+      <div class="interactive-item" id="sheep-box" aria-label="Draw me a sheep">
+        <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <filter id="glow">
+              <feDropShadow dx="0" dy="0" stdDeviation="3" flood-color="#FF6B6B" flood-opacity="0.5"/>
+            </filter>
+          </defs>
+          <!-- Box -->
+          <rect x="50" y="50" width="100" height="100" fill="#F8F9FA" stroke="#DEE2E6" stroke-width="2" rx="8" />
+          <!-- Sheep (hidden by default) -->
+          <g id="sheep" opacity="0">
+            <ellipse cx="100" cy="100" rx="25" ry="15" fill="#FFFFFF" stroke="#DEE2E6" stroke-width="1" />
+            <circle cx="90" cy="90" r="8" fill="#FFFFFF" stroke="#DEE2E6" stroke-width="1" />
+            <circle cx="110" cy="90" r="8" fill="#FFFFFF" stroke="#DEE2E6" stroke-width="1" />
+            <rect x="85" y="100" width="30" height="20" fill="#FFFFFF" stroke="#DEE2E6" stroke-width="1" rx="3" />
+          </g>
+          <!-- Text prompt -->
+          <text x="100" y="130" text-anchor="middle" font-size="14" fill="#6C757D">Click to see what's essential</text>
+        </svg>
+      </div>
+      <p class="interaction-hint" aria-hidden="true">👆 Click the box</p>
+    </div>
+  </section>
+
+  <!-- BAOBAB TREES: Scroll-Triggered Zoom -->
+  <section class="story-section" id="baobab">
+    <div class="story-content">
+      <h2>The Baobab Threat</h2>
+      <p>"It is a question of discipline," the little prince said to me later on...</p>
+    </div>
+    <!-- Baobab forest (zoom effect via scroll) -->
+    <div class="illustration parallax-layer baobab-pulse" data-speed="0.5" id="baobab-forest">
+      <svg viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <filter id="shadow">
+            <feDropShadow dx="0" dy="4" stdDeviation="2" flood-color="#000000" flood-opacity="0.3"/>
+          </filter>
+          <linearGradient id="trunkGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" style="stop-color:#8B4513" />
+            <stop offset="100%" style="stop-color:#A0522D" />
+          </linearGradient>
+        </defs>
+        <!-- Distant baobabs (smaller) -->
+        <g transform="translate(100,400) scale(0.6)">
+          <path d="M0,0 Q-10,-50 0,-100 Q10,-50 0,0 Z" fill="url(#trunkGrad)" filter="url(#shadow)" />
+          <circle cx="0" cy="-110" r="15" fill="#2E8B57" />
+        </g>
+        <g transform="translate(400,450) scale(0.8)">
+          <path d="M0,0 Q-15,-60 0,-120 Q15,-60 0,0 Z" fill="url(#trunkGrad)" filter="url(#shadow)" />
+          <circle cx="0" cy="-130" r="20" fill="#2E8B57" />
+        </g>
+        <!-- Foreground baobab (largest - triggers zoom feeling) -->
+        <g transform="translate(700,500) scale(1.2)">
+          <path d="M0,0 Q-20,-80 0,-160 Q20,-80 0,0 Z" fill="url(#trunkGrad)" filter="url(#shadow)" />
+          <circle cx="0" cy="-170" r="25" fill="#2E8B57" />
+        </g>
+      </svg>
+    </div>
+  </section>
+
+  <!-- FOX TAMING: Drag-to-Rotate Interaction -->
+  <section class="story-section" id="fox">
+    <div class="story-content">
+      <h2>The Fox's Secret</h2>
+      <p>"And now here is my secret, a very simple secret: It is only with the heart that one can see rightly..."</p>
+      <!-- Interactive taming circle -->
+      <div class="interactive-item" id="fox-circle" aria-label="Drag to complete the taming ritual">
+        <svg viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <filter id="glow">
+              <feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#FFD700" flood-opacity="0.3"/>
+            </filter>
+          </defs>
+          <!-- Circle path -->
+          <path d="M150,20 
+                   A130,130 0 0,1 280,150 
+                   A130,130 0 0,1 150,280 
+                   A130,130 0 0,1 20,150 
+                   A130,130 0 0,1 150,20" 
+                fill="none" stroke="#DEE2E6" stroke-width="4" />
+          <!-- Fox -->
+          <g id="fox" transform="translate(150,150)">
+            <path d="M0,-60 Q-10,-50 -15,-40 Q-20,-30 -25,-10 Q-20,0 -15,15 Q-10,30 0,40 Q10,30 15,15 Q20,0 25,-10 Q30,-30 40,-40 Q50,-50 40,-60" 
+                  fill="#8B4513" stroke="#654321" stroke-width="1.5" />
+            <circle cx="0" cy="-40" r="8" fill="#DEB887" />
+            <circle cx="-3" cy="-42" r="1.5" fill="#000" />
+            <circle cx="3" cy="-42" r="1.5" fill="#000" />
+          </g>
+          <!-- Prince -->
+          <g id="prince" transform="translate(150,150) rotate(-90)">
+            <path d="M0,-60 Q-10,-50 -15,-40 Q-20,-30 -25,-10 Q-20,0 -15,15 Q-10,30 0,40 Q10,30 15,15 Q20,0 25,-10 Q30,-30 40,-40 Q50,-50 40,-60" 
+                  fill="#DEB887" stroke="#8B4513" stroke-width="1.5" />
+            <circle cx="0" cy="-40" r="6" fill="#FFFFFF" />
+            <circle cx="-1.5" cy="-42" r="1" fill="#000" />
+            <circle cx="1.5" cy="-42" r="1" fill="#000" />
+          </g>
+          <!-- Connection line (appears on interaction) -->
+          <path id="connection" d="M0,-60 L0,-60" 
+                stroke="#FFD700" stroke-width="3" 
+                stroke-dasharray="5,5" 
+                filter="url(#glow)" />
+        </svg>
+      </div>
+      <p class="interaction-hint" aria-hidden="true">👆 Drag to complete the circle</p>
+    </div>
+  </section>
+
+  <!-- EPILOGUE: Return Home -->
+  <section class="story-section" id="epilogue">
+    <div class="story-content">
+      <h2>And So...</h2>
+      <p>And now here is my secret, a very simple secret: It is only with the heart that one can see rightly...</p>
+    </div>
+    <!-- Returning ship (embedded SVG) -->
+    <div class="illustration parallax-layer" data-speed="0.2">
+      <svg viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="shipGrad2" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" style="stop-color:#87CEEB" />
+            <stop offset="100%" style="stop-color:#4682B4" />
+          </linearGradient>
+        </defs>
+        <!-- Ship returning home -->
+        <path d="M200,400 Q400,200 600,400 Q550,350 500,300 Q450,250 400,300 Q350,250 300,300 Q250,350 200,400 Z" 
+              fill="url(#shipGrad2)" opacity="0.8" />
+        <!-- Stars -->
+        <circle cx="100" cy="100" r="1" fill="#FFFFFF" opacity="0.6" />
+        <circle cx="700" cy="500" r="2" fill="#FFFFFF" opacity="0.8" />
+        <circle cx="400" cy="300" r="1.5" fill="#FFFFFF" opacity="0.5" />
+      </svg>
+    </div>
+  </section>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+      const sections = document.querySelectorAll('.story-section');
+      const parallaxLayers = document.querySelectorAll('.parallax-layer');
+      const storyContents = document.querySelectorAll('.story-content');
+      const illustrations = document.querySelectorAll('.illustration');
+      const sheepBox = document.getElementById('sheep-box');
+      const foxCircle = document.getElementById('fox-circle');
+      const connection = document.getElementById('connection');
+      
+      // === SCROLL PROGRESS FOR PARALLAX ===
+      let scrollProgress = 0;
+      
+      const updateScrollProgress = () => {
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
+        scrollProgress = scrollTop / scrollHeight;
+        
+        parallaxLayers.forEach(layer => {
+          const speed = parseFloat(layer.getAttribute('data-speed')) || 0.5;
+          layer.style.setProperty('--scroll-progress', scrollProgress);
+        });
+      };
+      
+      // === SCENE ANIMATIONS (Intersection Observer) ===
+      const observerOptions = {
+        root: null,
+        threshold: 0.15,
+        rootMargin: '0px'
+      };
+      
+      const observer = new Observer((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.querySelector('.story-content')?.classList.add('is-visible');
+            entry.target.querySelector('.illustration')?.classList.add('is-visible');
+            observer.unobserve(entry.target);
+          }
+        });
+      }, observerOptions);
+      
+      sections.forEach(section => observer.observe(section));
+      
+      // === SHEEP-IN-BOX INTERACTION ===
+      if (sheepBox) {
+        const sheep = sheepBox.querySelector('#sheep');
+        const hint = sheepBox.querySelector('.interaction-hint');
+        const text = sheepBox.querySelector('text');
+        
+        sheepBox.addEventListener('click', () => {
+          if (reduceMotion.matches) return;
+          sheep.style.opacity = sheep.style.opacity === '1' ? '0' : '1';
+          text.textContent = sheep.style.opacity === '1' ? 
+            "\"What is essential is invisible to the eye.\"" : 
+            "Click to see what's essential";
+          hint.style.opacity = '0';
+        });
+        
+        // Keyboard accessibility
+        sheepBox.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            sheepBox.click();
+          }
+        });
+      }
+      
+      // === FOX TAMING INTERACTION ===
+      if (foxCircle && connection) {
+        let isDragging = false;
+        let centerX = 150, centerY = 150;
+        let radius = 130;
+        let startAngle = 0;
+        
+        const updateConnection = (clientX, clientY) => {
+          const dx = clientX - centerX;
+          const dy = clientY - centerY;
+          const angle = Math.atan2(dy, dx);
+          const endX = centerX + radius * Math.cos(angle);
+          const endY = centerY + radius * Math.sin(angle);
+          
+          connection.setAttribute('d', `M0,-60 L${endX - centerX},${endY - centerY}`);
+        };
+        
+        foxCircle.addEventListener('pointerdown', (e) => {
+          isDragging = true;
+          const rect = foxCircle.getBoundingClientRect();
+          centerX = rect.left + rect.width / 2;
+          centerY = rect.top + rect.height / 2;
+          startAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX);
+          foxCircle.style.transition = 'none';
+        });
+        
+        foxCircle.addEventListener('pointermove', (e) => {
+          if (!isDragging) return;
+          updateConnection(e.clientX, e.clientY);
+        });
+        
+        foxCircle.addEventListener('pointerup', () => {
+          isDragging = false;
+          foxCircle.style.transition = 'transform 200ms cubic-bezier(0.4, 0, 0.2, 1)';
+          // Snap back to start
+         
